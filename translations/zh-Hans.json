@@ -1,0 +1,114 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "家超 IoT 登录",
+        "description": "请输入手机号，我们将发送验证码。",
+        "data": {
+          "phone": "手机号",
+          "country_code": "国家区号"
+        }
+      },
+      "code": {
+        "title": "输入验证码",
+        "description": "请输入收到的短信验证码。",
+        "data": {
+          "code": "验证码"
+        }
+      },
+      "home": {
+        "title": "选择家庭",
+        "description": "请选择要添加的家庭。",
+        "data": {
+          "home_id": "家庭"
+        }
+      },
+      "devices": {
+        "title": "确认设备",
+        "description": "将添加以下设备：\n{devices}",
+        "data": {}
+      }
+    },
+    "error": {
+      "cannot_send_code": "发送验证码失败，请检查手机号。",
+      "invalid_code": "验证码错误或登录失败。"
+    }
+  },
+  "entity": {
+    "fan": {
+      "air_purifier": {
+        "name": "空气净化器",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "manual": "手动",
+              "auto": "自动",
+              "sleep": "睡眠",
+              "turbo": "超强",
+              "focus": "专注",
+              "baby": "母婴",
+              "meeting": "会议",
+              "smoke": "净烟",
+              "home": "回家",
+              "deodorize": "除味",
+              "pet": "铲屎"
+            }
+          }
+        }
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "净化模式",
+        "state": {
+          "manual": "手动",
+          "auto": "自动",
+          "sleep": "睡眠",
+          "turbo": "超强",
+          "focus": "专注",
+          "baby": "母婴",
+          "meeting": "会议",
+          "smoke": "净烟",
+          "home": "回家",
+          "deodorize": "除味",
+          "pet": "铲屎"
+        }
+      },
+      "startup_mode": {
+        "name": "开机状态",
+        "state": {
+          "default_on": "默认开机",
+          "memory": "记忆上次"
+        }
+      },
+      "indicator_light": {
+        "name": "指示灯",
+        "state": {
+          "off": "关闭",
+          "panel": "面板灯",
+          "air": "空气质量灯",
+          "all": "全部"
+        }
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "儿童锁"
+      },
+      "anion": {
+        "name": "负离子"
+      },
+      "button_sound": {
+        "name": "按键声"
+      }
+    },
+    "sensor": {
+      "pm25": {
+        "name": "PM2.5 浓度"
+      },
+      "runtime": {
+        "name": "累计运行"
+      }
+    }
+  }
+}

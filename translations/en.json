@@ -1,0 +1,114 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Jiachao IoT Login",
+        "description": "Enter your phone number to receive a verification code.",
+        "data": {
+          "phone": "Phone Number",
+          "country_code": "Country Code"
+        }
+      },
+      "code": {
+        "title": "Enter Verification Code",
+        "description": "Enter the SMS verification code.",
+        "data": {
+          "code": "Verification Code"
+        }
+      },
+      "home": {
+        "title": "Select Home",
+        "description": "Choose the home to add devices from.",
+        "data": {
+          "home_id": "Home"
+        }
+      },
+      "devices": {
+        "title": "Confirm Devices",
+        "description": "The following devices will be added:\n{devices}",
+        "data": {}
+      }
+    },
+    "error": {
+      "cannot_send_code": "Failed to send verification code. Check phone number.",
+      "invalid_code": "Invalid code or login failed."
+    }
+  },
+  "entity": {
+    "fan": {
+      "air_purifier": {
+        "name": "Air Purifier",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "manual": "Manual",
+              "auto": "Auto",
+              "sleep": "Sleep",
+              "turbo": "Turbo",
+              "focus": "Focus",
+              "baby": "Baby",
+              "meeting": "Meeting",
+              "smoke": "Smoke",
+              "home": "Home",
+              "deodorize": "Deodorize",
+              "pet": "Pet"
+            }
+          }
+        }
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Purification Mode",
+        "state": {
+          "manual": "Manual",
+          "auto": "Auto",
+          "sleep": "Sleep",
+          "turbo": "Turbo",
+          "focus": "Focus",
+          "baby": "Baby",
+          "meeting": "Meeting",
+          "smoke": "Smoke",
+          "home": "Home",
+          "deodorize": "Deodorize",
+          "pet": "Pet"
+        }
+      },
+      "startup_mode": {
+        "name": "Startup Mode",
+        "state": {
+          "default_on": "Default On",
+          "memory": "Memory"
+        }
+      },
+      "indicator_light": {
+        "name": "Indicator Light",
+        "state": {
+          "off": "Off",
+          "panel": "Panel Light",
+          "air": "Air Quality Light",
+          "all": "All"
+        }
+      }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "Child Lock"
+      },
+      "anion": {
+        "name": "Anion"
+      },
+      "button_sound": {
+        "name": "Button Sound"
+      }
+    },
+    "sensor": {
+      "pm25": {
+        "name": "PM2.5"
+      },
+      "runtime": {
+        "name": "Runtime"
+      }
+    }
+  }
+}
