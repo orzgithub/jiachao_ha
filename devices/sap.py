@@ -8,16 +8,15 @@ from ..device_base import JiachaoDeviceBase
 from ..const import (
     CMD_SET_SAP_STAT,
     CMD_HOST_CONF,
+    SAP_MODE_NAMES,
+    SAP_MODE_PARAMS,
+    SAP_SMODE_NAMES,
+    SAP_SMODE_VALUES,
+    SAP_LS_NAMES,
+    SAP_LS_VALUES,
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-SAP_MODES = [
-    "manual", "auto", "sleep", "turbo", "focus", "baby",
-    "meeting", "smoke", "home", "deodorize", "pet"
-]
-SAP_SMODES = ["default_on", "memory"]
-SAP_LS_OPTIONS = ["off", "panel", "air", "all"]
 
 
 class JiachaoSAPDevice(JiachaoDeviceBase):
@@ -39,6 +38,7 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
             "ve": None,
             "pm25": None,
             "ttime": None,
+            "rtime": None,
             "mac": None,
             "sw_version": None,
             "hw_version": None,
@@ -53,7 +53,7 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
         if action == "sap_stat":
             for key, state_key in [
                 ("p", "power"), ("ws", "speed"), ("rm", "mode"),
-                ("aqi_num", "pm25"), ("ttime", "ttime"),
+                ("aqi_num", "pm25"), ("ttime", "ttime"), ("rtime", "rtime"),
             ]:
                 if key in data:
                     self._state[state_key] = data[key]
@@ -110,10 +110,11 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
             "m": {"req": {"a": CMD_SET_SAP_STAT, "ws": speed}}
         })
 
-    async def async_set_mode(self, mode: int) -> None:
-        await self.async_send_command({
-            "m": {"req": {"a": CMD_SET_SAP_STAT, "rm": mode}}
-        })
+    async def async_set_mode(self, rm: int, rtime: int | None = None) -> None:
+        req = {"a": CMD_SET_SAP_STAT, "rm": rm}
+        if rtime is not None:
+            req["rtime"] = rtime
+        await self.async_send_command({"m": {"req": req}})
 
     async def async_set_smode(self, smode: int) -> None:
         await self.async_send_command({
@@ -155,6 +156,20 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
             "m": {"req": {"a": CMD_HOST_CONF, "ve": 0}}
         })
 
+    def _get_current_mode_key(self) -> str | None:
+        rm = self._state.get("mode")
+        rtime = self._state.get("rtime")
+        if rm is None:
+            return None
+        if rm == 3:
+            if rtime is not None and rtime > 0:
+                return "pet"
+            return "turbo"
+        for (m_rm, _m_rtime), name in zip(SAP_MODE_PARAMS, SAP_MODE_NAMES):
+            if m_rm == rm and m_rm != 3:
+                return name
+        return None
+
     def get_entity_specs(self) -> list[dict[str, Any]]:
         """Return entity specs for SAP device."""
         return [
@@ -166,12 +181,14 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
                     "turn_on": self.async_set_power_on,
                     "turn_off": self.async_set_power_off,
                     "set_percentage": self.async_set_speed,
-                    "set_preset_mode": self.async_set_mode,
+                    "set_mode": self.async_set_mode,   # ← 接收 (rm, rtime)
                 },
                 "extra": {
-                    "preset_modes": SAP_MODES,
+                    "preset_mode_names": SAP_MODE_NAMES,
+                    "preset_mode_params": SAP_MODE_PARAMS,
                     "speed_count": 3,
                     "speed_list": ["1", "2", "3"],
+                    "mode_key_getter": self._get_current_mode_key,
                 },
             },
             {
@@ -180,9 +197,9 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
                 "unique_id_suffix": "mode",
                 "methods": {"select_option": self.async_set_mode},
                 "extra": {
-                    "options": SAP_MODES,
-                    "value_getter": lambda: self.state.get("mode"),
-                    "send_index": True,
+                    "options": SAP_MODE_NAMES,
+                    "option_params": SAP_MODE_PARAMS,
+                    "mode_key_getter": self._get_current_mode_key,
                 },
             },
             {
@@ -191,9 +208,9 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
                 "unique_id_suffix": "smode",
                 "methods": {"select_option": self.async_set_smode},
                 "extra": {
-                    "options": SAP_SMODES,
+                    "options": SAP_SMODE_NAMES,
+                    "option_values": SAP_SMODE_VALUES,
                     "value_getter": lambda: self.state.get("smode"),
-                    "send_index": True,
                 },
             },
             {
@@ -202,9 +219,9 @@ class JiachaoSAPDevice(JiachaoDeviceBase):
                 "unique_id_suffix": "ls",
                 "methods": {"select_option": self.async_set_ls},
                 "extra": {
-                    "options": SAP_LS_OPTIONS,
+                    "options": SAP_LS_NAMES,
+                    "option_values": SAP_LS_VALUES,
                     "value_getter": lambda: self.state.get("ls"),
-                    "send_index": True,
                 },
             },
             {

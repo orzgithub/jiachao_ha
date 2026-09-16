@@ -43,9 +43,12 @@ class JiachaoSelect(SelectEntity):
         self._attr_device_info = get_device_info(device)
 
         extra = spec.get("extra", {})
-        self._attr_options = extra.get("options", [])
+        self._attr_options = list(extra.get("options", []))
+        self._option_params = extra.get("option_params")
+        self._option_values = extra.get("option_values")
         self._value_getter = extra.get("value_getter")
         self._state_key = spec.get("state_key")
+        self._mode_key_getter = extra.get("mode_key_getter")
 
         device.register_callback(self._update_callback)
 
@@ -58,36 +61,47 @@ class JiachaoSelect(SelectEntity):
         """Schedule state update."""
         self.async_write_ha_state()
 
-    def _get_current_value(self):
-        """Get current value from device state."""
-        if self._value_getter is not None:
-            return self._value_getter()
-        if self._state_key is not None:
-            return self._device.state.get(self._state_key)
-        return None
-
     @property
     def current_option(self) -> str | None:
-        """Return current selected option."""
-        value = self._get_current_value()
+        """Return current selected option key."""
+        if self._mode_key_getter is not None:
+            return self._mode_key_getter()
+        value = None
+        if self._value_getter is not None:
+            value = self._value_getter()
+        elif self._state_key is not None:
+            value = self._device.state.get(self._state_key)
+
         if value is None:
             return None
-        if isinstance(value, int) and 0 <= value < len(self._attr_options):
-            return self._attr_options[value]
-        if isinstance(value, str) and value in self._attr_options:
-            return value
-        return None
+        if self._option_values is None:
+            return None
+        try:
+            idx = self._option_values.index(value)
+            return self._attr_options[idx]
+        except ValueError:
+            return None
 
     async def async_select_option(self, option: str) -> None:
         """Select an option."""
         methods = self._spec.get("methods", {})
         if "select_option" not in methods:
             return
-        if option in self._attr_options:
-            extra = self._spec.get("extra", {})
-            send_index = extra.get("send_index", True)
-            if send_index:
-                value = self._attr_options.index(option)
-            else:
-                value = option
+
+        if option not in self._attr_options:
+            _LOGGER.warning(
+                "[Jiachao] option %r not in %s", option, self._attr_options,
+            )
+            return
+
+        idx = self._attr_options.index(option)
+
+        if self._option_params is not None:
+            params = self._option_params[idx]
+            _LOGGER.debug("[Jiachao] select %s -> %s", option, params)
+            await methods["select_option"](*params)
+        elif self._option_values is not None:
+            value = self._option_values[idx]
             await methods["select_option"](value)
+        else:
+            await methods["select_option"](idx)

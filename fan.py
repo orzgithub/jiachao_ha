@@ -5,10 +5,7 @@ from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util.percentage import (
-    ordered_list_item_to_percentage,
-    percentage_to_ordered_list_item,
-)
+from homeassistant.util.percentage import ordered_list_item_to_percentage
 
 from .const import DOMAIN
 from .hub import JiachaoHub
@@ -47,7 +44,11 @@ class JiachaoFan(FanEntity):
         self._attr_device_info = get_device_info(device)
 
         extra = spec.get("extra", {})
-        self._attr_preset_modes = extra.get("preset_modes", [])
+        self._preset_names = list(extra.get("preset_mode_names", []))
+        self._preset_params = list(extra.get("preset_mode_params", []))
+        self._attr_preset_modes = self._preset_names
+        self._mode_key_getter = extra.get("mode_key_getter")
+
         self._attr_speed_count = extra.get("speed_count", 3)
         self._speed_list = extra.get("speed_list", ["1", "2", "3"])
 
@@ -57,7 +58,7 @@ class JiachaoFan(FanEntity):
             FanEntityFeature.SET_SPEED
         )
         methods = spec.get("methods", {})
-        if "set_preset_mode" in methods:
+        if "set_mode" in methods and self._preset_names:
             features |= FanEntityFeature.PRESET_MODE
         self._attr_supported_features = features
 
@@ -92,15 +93,10 @@ class JiachaoFan(FanEntity):
 
     @property
     def preset_mode(self) -> str | None:
-        """Return current preset mode."""
-        mode = self._device.state.get("mode")
-        if mode is None:
+        """Return current preset mode key."""
+        if self._mode_key_getter is None:
             return None
-        if isinstance(mode, int) and 0 <= mode < len(self._attr_preset_modes):
-            return self._attr_preset_modes[mode]
-        if isinstance(mode, str) and mode in self._attr_preset_modes:
-            return mode
-        return None
+        return self._mode_key_getter()
 
     async def async_turn_on(
         self,
@@ -122,10 +118,7 @@ class JiachaoFan(FanEntity):
                 await set_pct(speed)
 
         if preset_mode is not None:
-            set_mode = methods.get("set_preset_mode")
-            if set_mode is not None and preset_mode in self._attr_preset_modes:
-                mode_idx = self._attr_preset_modes.index(preset_mode)
-                await set_mode(mode_idx)
+            await self._apply_preset(preset_mode)
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the fan off."""
@@ -149,7 +142,7 @@ class JiachaoFan(FanEntity):
             if on_method is not None:
                 await on_method()
                 import asyncio
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(1.0)
 
         set_pct = methods.get("set_percentage")
         if set_pct is not None:
@@ -158,24 +151,37 @@ class JiachaoFan(FanEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set preset mode."""
-        methods = self._spec.get("methods", {})
-        set_mode = methods.get("set_preset_mode")
-        if set_mode is None:
-            return
-
         if not self.is_on:
+            methods = self._spec.get("methods", {})
             on_method = methods.get("turn_on")
             if on_method is not None:
                 await on_method()
                 import asyncio
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(1.0)
+        await self._apply_preset(preset_mode)
 
-        if preset_mode in self._attr_preset_modes:
-            mode_idx = self._attr_preset_modes.index(preset_mode)
-            await set_mode(mode_idx)
+    async def _apply_preset(self, preset_mode: str) -> None:
+        methods = self._spec.get("methods", {})
+        set_mode = methods.get("set_mode")
+        if set_mode is None:
+            return
+
+        if preset_mode not in self._preset_names:
+            _LOGGER.warning(
+                "[Jiachao] preset_mode %r not in %s",
+                preset_mode, self._preset_names,
+            )
+            return
+
+        idx = self._preset_names.index(preset_mode)
+        params = self._preset_params[idx]
+        _LOGGER.debug(
+            "[Jiachao] preset_mode=%s -> set_mode%s", preset_mode, params,
+        )
+        await set_mode(*params)
 
     def _percentage_to_speed(self, percentage: int) -> int:
-        """Convert percentage to speed index (1-3)."""
+        """Convert percentage to integer speed (1-3)."""
         if percentage <= 33:
             return 1
         elif percentage <= 66:
